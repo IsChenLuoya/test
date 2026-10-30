@@ -1,0 +1,90 @@
+#include <at89c51RC2.h>
+#include "Delay.h"
+#include "Nixie.h"
+#include "MatrixLED.h"
+#include "Timer0.h"
+#include "Key.h"
+#include "Uart.h"
+#include "Init.h"
+
+unsigned char mode;
+unsigned char Keynum,KeyFlag=0;
+unsigned char confirm=0;
+unsigned char uartopen;
+
+
+void main()
+{
+	MatrixLED_Init();
+	Timer0_Init();
+	Uart1_Init();
+	_74H595_WriteByte(0x00);
+	Nixie(1,-1);
+	Init();
+	mode=1;
+	while(1)
+	{
+		if(KeyFlag==2)
+		{
+			P2_0=1;
+			SCON = 0x40;
+			KeyFlag=0;
+		}
+		else if(KeyFlag==3)
+		{
+			P2_0=0;
+			SCON = 0x50;
+			KeyFlag=0;
+		}
+		if(confirm==0)
+		{
+			  Nixie(1,mode);
+				Delay(500);
+				Nixie(1,-1);
+				Delay(500);
+				if(KeyFlag==1)
+				{
+					unsigned char k=Keynum;
+					KeyFlag=0;
+					if(k==1)
+					{
+						if(mode>1) mode--;
+						else mode=4;
+					}
+					else if(k==2)
+					{
+						if(mode<4) mode++;
+						else mode=1;
+					}
+				}
+		}	
+	}
+}
+
+
+void Timer0_Routine() interrupt 1
+{
+	static unsigned int T0Count;
+	static unsigned char KeyScan;
+	TL0 = 0x66;				//设置定时初始值
+	TH0 = 0xFC;				//设置定时初始值
+	T0Count++;
+	if(T0Count>=10)  // 每 10ms 扫描按键
+    {
+       T0Count=0;
+       KeyScan=Key();
+       if(KeyScan<5&&KeyScan>0)
+       {
+          Keynum=KeyScan;
+          KeyFlag=1;
+			 }
+			 else if(KeyScan==5)
+			 {
+				  KeyFlag=2;
+			 }
+			 else if(KeyScan==6)
+			 {
+				  KeyFlag=3;
+			 }
+		}
+}
