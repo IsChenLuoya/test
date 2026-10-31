@@ -3,5 +3,6 @@
 
 void Uart1_Init(void);
 void Uart_SendByte(unsigned char byte);
+void Uart_SendString(unsigned char code *str);
 
 #endif

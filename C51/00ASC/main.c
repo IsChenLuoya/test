@@ -32,7 +32,8 @@ unsigned char LEDNum=0;
 unsigned char t;
 unsigned char stayCnt=0;
 unsigned char LEDflag=0;
-unsigned char covered=0;  
+unsigned char covered=0;
+unsigned char uart_data=0;
 
 
 
@@ -64,14 +65,14 @@ void main()
 	{
 		if(KeyFlag==2)
 		{
-			P2_0=1;
 			SCON = 0x40;
 			KeyFlag=0;
+			ES=0;
 		}
 		else if(KeyFlag==3)
 		{
-			P2_0=0;
 			SCON = 0x50;
+			ES=1;
 			KeyFlag=0;
 		}
 		if(confirm==1)                                             //模式确认
@@ -85,6 +86,7 @@ void main()
 				case 1:
 				{
 					unsigned char iLED=0;
+					Uart_SendString("模式一进入");
 					lit=500;
 					if(LEDNum == 0)
 					{
@@ -102,6 +104,7 @@ void main()
 					{
 						if(KeyFlag==4)
 						{
+							Uart_SendString("模式一退出");
 							confirm=0;
 							key01=0;
 							P2=0xFF;
@@ -122,16 +125,17 @@ void main()
 							{
 								unsigned char k2=Keynum2;
 								Keynum2=0;
-								if(k2==2){lit+=50;}
-								else if(k2==1&&lit>50){lit-=50;}
+								if(k2==2){lit+=50;Uart_SendString("减速");}
+								else if(k2==1&&lit>50){lit-=50;Uart_SendString("加速");}
 							}
 							if(Keynum2 &&LEDmode3==0)
 							{
 								unsigned char k2=Keynum2;
 								Keynum2=0;
-								if(k2==3){if(LEDmode==1)LEDmode=2;else if(LEDmode==2)LEDmode=1;}
+								if(k2==3){if(LEDmode==1)LEDmode=2;else if(LEDmode==2)LEDmode=1;Uart_SendString("改序");}
 								else if(k2==4)
 								{
+									Uart_SendString("回灯");
 									if(LEDmode2==0)
 									{
 										if(LEDmode==1)
@@ -144,6 +148,7 @@ void main()
 								}
 								else if(k2==5)
 								{
+									Uart_SendString("编辑模式");
 									LEDmode3Flag=1;
 									LEDmode=0;
 									LEDmode2=0;
@@ -204,6 +209,7 @@ void main()
 					unsigned char n2=0;
 					xdata unsigned long a[8];
 					xdata unsigned char op[7];
+					Uart_SendString("模式二进入");
 					memset(op,0,sizeof(op));
 					memset(a,0,sizeof(a));
 					LCD_Init();
@@ -211,6 +217,7 @@ void main()
 					{
 						if(KeyFlag==4)
 						{
+							Uart_SendString("模式二退出");
 							confirm=0;
 							_74H595_WriteByte(0x00);
 							Buzzer_Time(100);
@@ -284,10 +291,12 @@ void main()
 				case 3:
 				{
 					unsigned char i,Offset=3,Count=0;
+					Uart_SendString("模式三进入");
 					while(1)
 					{
 						if(KeyFlag==4)
 						{
+							Uart_SendString("模式三退出");
 							confirm=0;
 							_74H595_WriteByte(0x00);
 							Buzzer_Time(100);
@@ -316,11 +325,13 @@ void main()
 				case 4:                                                  //PWM
 				{
 					confirm1=1;
+					Uart_SendString("模式四进入");
 					while(1)
 					{
 						Keynum2=MatrixKey(); 
 						if(KeyFlag==4)
 						{
+							Uart_SendString("模式四退出");
 							confirm=0;
 							confirm1=0;
 							P2=0xFF;
@@ -334,12 +345,12 @@ void main()
 						{
 							unsigned char k2=Keynum2;
 							Keynum2=0;
-							if(k2==1) key1=-key1;
-							else if(k2==2&&term > 2)  term-=1;
-							else if(k2==3&&term < 20) term+=1;
-							else if(k2==5) key5=-key5;
-							else if(k2==6) lightud+=5;
-							else if(k2==7) lightud-=5;
+							if(k2==1) {key1=-key1;Uart_SendString("蜂鸣器开关");}
+							else if(k2==2&&term > 2)  {term-=1;Uart_SendString("频率升");}
+							else if(k2==3&&term < 20) {term+=1;Uart_SendString("频率降");}
+							else if(k2==5) {key5=-key5;Uart_SendString("呼吸灯开关");}
+							else if(k2==6) {lightud+=5;Uart_SendString("亮度升");}
+							else if(k2==7) {lightud-=5;Uart_SendString("亮度降");}
 						}
 						if(key1==1)
 						Buzzer_Control(term);
@@ -473,6 +484,13 @@ void Timer0_Routine() interrupt 1
     {
       T0Count=0;
 			KeyScan=Key();
+			if(KeyScan==0)
+			{
+				KeyScan=uart_data;
+				uart_data=0;
+			}
+			
+			
 			if(KeyScan==1||KeyScan==2)
 			{
 				 Keynum=KeyScan;
@@ -498,3 +516,20 @@ void Timer0_Routine() interrupt 1
 			}
 		}
 }
+
+
+
+
+void UART_Routine() interrupt 4
+{
+	if(RI==1)
+	{
+		uart_data=SBUF;
+		RI=0;
+	}
+	if(TI==1)
+  {
+    TI=0;
+  }
+}
+
