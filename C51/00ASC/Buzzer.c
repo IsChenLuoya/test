@@ -13,6 +13,19 @@ void Buzzer_Delay500us(void)	//@11.0592MHz
 	while (--i);
 }
 
+void Buzzer_Delay100us(unsigned int term)	//@11.0592MHz
+{
+	unsigned char data i;
+	while(term>0)
+	{
+		_nop_();
+		i = 43;
+		while (--i);
+		term--;
+	}
+	
+}
+
 
 void Buzzer_Time(unsigned int ms)
 {
@@ -22,4 +35,15 @@ void Buzzer_Time(unsigned int ms)
 				Buzzer=!Buzzer;
 				Buzzer_Delay500us();
 			}
+}
+
+
+void Buzzer_Control(unsigned int term)
+{	
+	unsigned int total=100/term;
+  while (total--)
+  {
+     Buzzer = !Buzzer;
+     Buzzer_Delay100us(term);
+  }
 }

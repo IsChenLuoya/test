@@ -2,49 +2,71 @@
 #include "delay.h"
 #include "Buzzer.h"
 
-
-unsigned char Key()
+unsigned char Key(void)
 {
-	unsigned int time=0,flag=0;
-	if(P3_1==0){Delay(20);while(P3_1==0);Delay(20);return 1;}
-	if(P3_0==0){Delay(20);while(P3_0==0);Delay(20);return 2;}
-	if(P3_2==0)
-	{
-		time=0;
-		Delay(20);
-		while(P3_2==0)
-		{
-			time++;
-			if(time>20000)
+    static unsigned char lastraw=0;
+    static unsigned char stable=0;
+    static unsigned char count=0;
+    static unsigned int  hold=0;
+    static unsigned char Long=0;
+    unsigned char raw=0;
+	
+	
+    if(P3_1==0) raw=1;
+    else if(P3_0==0) raw=2;
+    else if(P3_2==0) raw=3;
+    else if(P3_3==0) raw=4;
+	
+	
+    if(raw==lastraw)
+    {
+        if(count<2) count++;
+    }
+    else
+    {
+        lastraw=raw;
+        count=0;
+        return 0;
+    }
+    if(count<2) return 0;
+		
+		
+    if(raw!=stable)
+    {
+			  unsigned char old=stable;
+        stable=raw;
+        hold=0;
+			if(raw!=0)
 			{
-				Buzzer_Time(100);
-				Delay(100);
-				Buzzer_Time(100);
-				while(P3_2==0);
-				return 5;
+				if(raw==1||raw==2) 
+					return raw;
+				return 0;
 			}
-		}
-		Delay(20);
-		return 3;
-	}
-	if(P3_3==0)
-	{
-		time=0;
-		Delay(20);
-		while(P3_3==0)
-		{
-			time++;
-			if(time>20000)
+      else
 			{
-				Buzzer_Time(100);
-				Delay(100);
-				Buzzer_Time(100);
-				while(P3_3==0);
-				return 6;
-			}
-		}
-		Delay(20);
-		return 4;
-	}
-	return 0;
+
+				if(!Long&&(old==3||old==4))
+				{
+					Long=0;
+					return old;
+				}
+				Long=0;
+				return 0;
+      }
+				
+    }
+
+    if((stable==3||stable==4)&&!Long)
+    {
+        if(++hold>100)
+        {
+            Long=1;
+					if(stable==3)
+            return 5;
+					else if(stable==4)
+            return 6;
+        }
+    }
+
+    return 0;
 }

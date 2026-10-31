@@ -7,11 +7,20 @@
 #include "Uart.h"
 #include "Init.h"
 #include "Buzzer.h"
+#include "MatrixKey.h"
 
 unsigned char mode;
 unsigned char Keynum,KeyFlag=0;
-unsigned char confirm=0;
+unsigned char confirm=0,confirm1=0;
 unsigned char uartopen;
+unsigned char term=10;
+unsigned char Keynum2;
+char key1=1,key5=1;
+unsigned char lightud=50;
+unsigned char j;
+unsigned char KeyScan;
+
+
 
 unsigned char code Animation[]={
 0x3F,0x44,0x84,0x84,0x44,0x3F,0x00,0x00,0x70,0x89,0x89,0x89,0x89,0x06,0x00,0x00,
@@ -20,6 +29,13 @@ unsigned char code Animation[]={
 0x89,0x91,0xA1,0x7E,0x00,0x00,0x70,0x88,0x84,0xC2,0x21,0xC2,0x84,0x88,0x70,0x00,
 0x3F,0x44,0x84,0x84,0x44,0x3F,0x00,0x00
 };
+
+
+void ev(unsigned int t)
+{
+	while(t--);
+}
+
 
 void main()
 {
@@ -32,6 +48,7 @@ void main()
 	mode=1;
 	while(1)
 	{
+		
 		if(KeyFlag==2)
 		{
 			P2_0=1;
@@ -47,6 +64,9 @@ void main()
 		if(confirm==1)                                             //模式确认
 		{
 			Nixie(1,mode);
+			Buzzer_Time(100);
+			Delay(100);
+			Buzzer_Time(100);
 			switch(mode)
 			{
 				case 1:
@@ -64,11 +84,12 @@ void main()
 					{
 						if(KeyFlag==4)
 						{
-								confirm=0;
+							confirm=0;
 							_74H595_WriteByte(0x00);
-								Buzzer_Time(100);
-								Delay(100);
-								Buzzer_Time(100);
+							Buzzer_Time(100);
+							Delay(100);
+							Buzzer_Time(100);
+							KeyFlag=0;
 							break;
 						}
 						for(i=0;i<8;i++)
@@ -86,21 +107,44 @@ void main()
 							}
 						}
 					}
-				}
-				case 4:
-				{
 					break;
 				}
-			}
-			if(KeyFlag==4)
+				case 4:                                                  //PWM
 				{
-						confirm=0;
-						Buzzer_Time(100);
-						Delay(100);
-						Buzzer_Time(100);
-				}
-		}
-		if(confirm==0)
+					confirm1=1;
+					while(1)
+					{
+						Keynum2=MatrixKey(); 
+						if(KeyFlag==4)
+						{
+							confirm=0;
+							confirm1=0;
+							P2=0xFF;
+							Buzzer_Time(100);
+							Delay(100);
+							Buzzer_Time(100);
+							KeyFlag=0;
+							break;
+						}
+						if(Keynum2)                     // 矩阵键调音调
+						{
+							unsigned char k2=Keynum2;
+							Keynum2=0;
+							if(k2==1) key1=-key1;
+							else if(k2==2&&term > 2)  term-=1;
+							else if(k2==3&&term < 20) term+=1;
+							else if(k2==5) key5=-key5;
+							else if(k2==6) lightud+=5;
+							else if(k2==7) lightud-=5;
+						}
+						if(key1==1)
+						Buzzer_Control(term);
+					}	
+					break;
+			 }
+		  }
+	  } 
+		if(confirm==0)                               //菜单选择
 		{
 			  Nixie(1,mode);
 				Delay(500);
@@ -124,7 +168,7 @@ void main()
 						else mode=1;
 					}
 				}
-		}	
+		 }	
 		
 	}
 }
@@ -134,38 +178,79 @@ void Timer0_Routine() interrupt 1
 {
 	static unsigned int T0Count;
 	static unsigned char KeyScan;
+	static unsigned char PWMCount;
 	TL0 = 0x66;				//设置定时初始值
 	TH0 = 0xFC;				//设置定时初始值
 	T0Count++;
-	if(T0Count>=10)  // 每 10ms 扫描按键
+	
+	if(confirm1==1&&key5==1)
+	{
+		PWMCount++;
+		if(PWMCount>=20) 
+			PWMCount=0;
+		if(PWMCount<(lightud/5))
+		{
+			P2_0=0;
+			P2_1=0;
+			P2_2=0;
+			P2_3=0;
+			P2_4=0;
+			P2_6=0;
+			P2_7=0;
+		}
+		else
+		{
+			P2_0=1;
+			P2_1=1;
+			P2_2=1;
+			P2_3=1;
+			P2_4=1;
+			P2_6=1;
+			P2_7=1;
+		}
+	}
+	else if(confirm1==1&&key5==-1)
+	{
+			P2_0=1;
+			P2_1=1;
+			P2_2=1;
+			P2_3=1;
+			P2_4=1;
+			P2_6=1;
+			P2_7=1;
+	}
+	else
+	{
+		PWMCount = 0;
+	}
+	
+	
+	if(T0Count>=10)  
     {
-       T0Count=0;
-       KeyScan=Key();
-       if(KeyScan==1||KeyScan==2)
-       {
-          Keynum=KeyScan;
-          KeyFlag=1;
-			 }
-			 else if(KeyScan==3)
-       {
-          Keynum=KeyScan;
-				  confirm=1;
-				  Buzzer_Time(100);
-			    Delay(100);
-			    Buzzer_Time(100);
-          KeyFlag=1;
-			 }
-			 else if(KeyScan==5)
-			 {
-				  KeyFlag=2;
-			 }
-			 else if(KeyScan==6)
-			 {
-				  KeyFlag=3;
-			 }
-			 else if(KeyScan==4)
-			 {
-				  KeyFlag=4;
-			 }
+      T0Count=0;
+			KeyScan=Key();
+			if(KeyScan==1||KeyScan==2)
+			{
+				 Keynum=KeyScan;
+				 KeyFlag=1;
+			}
+			else if(KeyScan==3)
+			{
+				 Keynum=KeyScan;
+				 confirm=1;
+				 KeyFlag=1;
+			}
+			else if(KeyScan==5)
+			{
+				 KeyFlag=2;
+			}
+			else if(KeyScan==6)
+			{
+				 KeyFlag=3;
+			}
+			else if(KeyScan==4)
+			{
+				 KeyFlag=4;
+			}
 		}
 }
