@@ -471,6 +471,26 @@
               <FileType>5</FileType>
               <FilePath>.\MatrixKey.h</FilePath>
             </File>
+            <File>
+              <FileName>LCD1602.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\LCD1602.c</FilePath>
+            </File>
+            <File>
+              <FileName>LCD1602.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\LCD1602.h</FilePath>
+            </File>
+            <File>
+              <FileName>calculate.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\calculate.c</FilePath>
+            </File>
+            <File>
+              <FileName>calculate.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\calculate.h</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

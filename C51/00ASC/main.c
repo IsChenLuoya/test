@@ -1,4 +1,5 @@
 #include <at89c51RC2.h>
+#include <string.h>
 #include "Delay.h"
 #include "Nixie.h"
 #include "MatrixLED.h"
@@ -8,6 +9,8 @@
 #include "Init.h"
 #include "Buzzer.h"
 #include "MatrixKey.h"
+#include "LCD1602.h"
+#include "Calculate.h"
 
 unsigned char mode;
 unsigned char Keynum,KeyFlag=0;
@@ -74,8 +77,88 @@ void main()
 					break;
 				}
 				case 2:
-				{
-					break;
+				{	
+					long sum=0;
+					unsigned int Num=0;
+					unsigned char n=1;
+					unsigned char n2=0;
+					xdata unsigned long a[8];
+					xdata unsigned char op[7];
+					memset(op,0,sizeof(op));
+					memset(a,0,sizeof(a));
+					LCD_Init();
+					while(1)
+					{
+						if(KeyFlag==4)
+						{
+							confirm=0;
+							_74H595_WriteByte(0x00);
+							Buzzer_Time(100);
+							Delay(100);
+							Buzzer_Time(100);
+							KeyFlag=0;
+							break;
+						}
+						Keynum2=MatrixKey(); 
+						if(Keynum2)
+						{
+							unsigned char k2=Keynum2;
+							Keynum2=0;
+							if(k2==2){LCD_ShowNum(1,n,1,1);n++;a[n2]=a[n2]*10+1;}
+							else if(k2==3){LCD_ShowNum(1,n,2,1);n++;a[n2]=a[n2]*10+2;}
+							else if(k2==4){LCD_ShowNum(1,n,3,1);n++;a[n2]=a[n2]*10+3;}
+							else if(k2==5){LCD_ShowNum(1,n,4,1);n++;a[n2]=a[n2]*10+4;}
+							else if(k2==6){LCD_ShowNum(1,n,5,1);n++;a[n2]=a[n2]*10+5;}
+							else if(k2==7){LCD_ShowNum(1,n,6,1);n++;a[n2]=a[n2]*10+6;}
+							else if(k2==8){LCD_ShowNum(1,n,7,1);n++;a[n2]=a[n2]*10+7;}
+							else if(k2==9){LCD_ShowNum(1,n,8,1);n++;a[n2]=a[n2]*10+8;}
+							else if(k2==10){LCD_ShowNum(1,n,9,1);n++;a[n2]=a[n2]*10+9;}
+							else if(k2==1){LCD_ShowNum(1,n,0,1);n++;a[n2]=a[n2]*10;}
+							else if(k2==11)
+							{
+								LCD_Init();
+								n=1;
+								n2=0;
+								memset(op, 0, sizeof(op));
+								memset(a, 0, sizeof(a));
+							}
+							
+							else if(k2==13)
+							{
+								LCD_ShowChar(1,n,'+');
+								op[n2]=1;
+								n2++;
+								n++;
+							}
+							else if(k2==14)
+							{
+								LCD_ShowChar(1,n,'-');
+								op[n2]=2;
+								n2++;
+								n++;
+							}
+							else if(k2==15)
+							{
+								LCD_ShowChar(1,n,'*');
+								op[n2]=3;
+								n2++;
+								n++;
+							}
+							else if(k2==16)
+							{
+								LCD_ShowChar(1,n,'/');
+								op[n2]=4;
+								n2++;
+								n++;
+							}
+							else if(k2==12)
+							{
+								LCD_ShowChar(1,n,'=');
+								LCD_ShowSignedLongNum(2,1,calculate(a,op),16);
+							}
+						}
+					}
+					break;	
 				}
 				case 3:
 				{
