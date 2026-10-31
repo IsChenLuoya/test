@@ -1,5 +1,31 @@
 #include <at89c51RC2.h>
 
+unsigned char MatrixKey_LEDRaw(void)
+{
+    unsigned char map = 0;
+
+    P1 = 0xFF; P1_3 = 0;
+    if(P1_5 == 0) map |= 0x01;   
+    if(P1_4 == 0) map |= 0x10;   
+
+    P1 = 0xFF; P1_2 = 0;
+    if(P1_5 == 0) map |= 0x02;   
+    if(P1_4 == 0) map |= 0x20;   
+
+    P1 = 0xFF; P1_1 = 0;
+    if(P1_5 == 0) map |= 0x04;   
+    if(P1_4 == 0) map |= 0x40;   
+
+    P1 = 0xFF; P1_0 = 0;
+    if(P1_5 == 0) map |= 0x08;   
+    if(P1_4 == 0) map |= 0x80;   
+
+    P1 = 0xFF;
+    return map;
+}
+
+
+
 unsigned char MatrixKey(void)
 {
 	static unsigned char Lastraw  = 0;   

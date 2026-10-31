@@ -2,5 +2,6 @@
 #define __MATRIXKEY_H__
 
 unsigned char MatrixKey();
+unsigned char MatrixKey_LEDRaw();
 
 #endif

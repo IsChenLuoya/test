@@ -1,5 +1,6 @@
 #include <at89c51RC2.h>
 #include <string.h>
+#include <intrins.h>
 #include "Delay.h"
 #include "Nixie.h"
 #include "MatrixLED.h"
@@ -11,6 +12,7 @@
 #include "MatrixKey.h"
 #include "LCD1602.h"
 #include "Calculate.h"
+#include "SetLED.h"
 
 unsigned char mode;
 unsigned char Keynum,KeyFlag=0;
@@ -18,10 +20,19 @@ unsigned char confirm=0,confirm1=0;
 unsigned char uartopen;
 unsigned char term=10;
 unsigned char Keynum2;
-char key1=1,key5=1;
+char key1=1,key5=1,key01=0;
 unsigned char lightud=50;
 unsigned char j;
 unsigned char KeyScan;
+unsigned lit;
+unsigned LEDmode=1,LEDmode2=0,LEDmode3=0,LEDmode3Flag=0;
+unsigned char LED0[8];
+char LEDi;
+unsigned char LEDNum=0;
+unsigned char t;
+unsigned char stayCnt=0;
+unsigned char LEDflag=0;
+unsigned char covered=0;  
 
 
 
@@ -51,7 +62,6 @@ void main()
 	mode=1;
 	while(1)
 	{
-		
 		if(KeyFlag==2)
 		{
 			P2_0=1;
@@ -74,6 +84,116 @@ void main()
 			{
 				case 1:
 				{
+					unsigned char iLED=0;
+					lit=500;
+					if(LEDNum == 0)
+					{
+							LEDNum = 8;
+							for(t = 0; t < 8; t++)
+							{
+									 LED0[t] = (1u << t); 
+							}
+					}
+					stayCnt=0;
+					LEDflag=0;
+					P2 = ~LED0[LEDi];
+					key01=1;
+					while(1)
+					{
+						if(KeyFlag==4)
+						{
+							confirm=0;
+							key01=0;
+							P2=0xFF;
+							_74H595_WriteByte(0x00);
+							LEDmode=1;
+							LEDmode2=0;
+							LEDmode3=0;
+							Buzzer_Time(100);
+							Delay(100);
+							Buzzer_Time(100);
+							KeyFlag=0;
+							break;
+						}
+						if(LEDmode3==0)
+						{
+							Keynum2=MatrixKey();
+							if((Keynum2==1||Keynum2==2)&&LEDmode3==0)
+							{
+								unsigned char k2=Keynum2;
+								Keynum2=0;
+								if(k2==2){lit+=50;}
+								else if(k2==1&&lit>50){lit-=50;}
+							}
+							if(Keynum2 &&LEDmode3==0)
+							{
+								unsigned char k2=Keynum2;
+								Keynum2=0;
+								if(k2==3){if(LEDmode==1)LEDmode=2;else if(LEDmode==2)LEDmode=1;}
+								else if(k2==4)
+								{
+									if(LEDmode2==0)
+									{
+										if(LEDmode==1)
+											LEDmode2=1;
+										else if(LEDmode==2)
+											LEDmode2=2;
+									}
+									else if(LEDmode2)
+										LEDmode2=0;
+								}
+								else if(k2==5)
+								{
+									LEDmode3Flag=1;
+									LEDmode=0;
+									LEDmode2=0;
+									P2=0x00;
+									Delay(1000);
+									P2=0xFF;
+									LEDmode3=1;
+									LEDNum=0;
+									LEDi=0;
+									stayCnt=0;
+									LEDflag=0;
+									covered=0;
+								}
+							}
+						}							
+						else if(LEDmode3==1)
+						{
+								unsigned char g=MatrixKey_LEDRaw();
+
+								if(g!=0)
+								{
+										Delay(20);
+										g|=MatrixKey_LEDRaw();
+
+										if(LEDNum<8)
+										{
+												LED0[LEDNum]=g;
+												LEDNum++;
+												covered|=g;
+
+												P2&=~g;
+										}
+
+										while(MatrixKey_LEDRaw()!=0);
+										Delay(20);
+
+										if(covered==0xFF)
+										{
+												P2=0xFF;
+												LEDmode3Flag=0;
+												LEDmode=1;
+												LEDmode3=0;
+												LEDi=0;
+												stayCnt=0;
+												LEDflag=0;
+										}
+								}
+						}
+					}
+					
 					break;
 				}
 				case 2:
@@ -97,6 +217,7 @@ void main()
 							Delay(100);
 							Buzzer_Time(100);
 							KeyFlag=0;
+							P2=0xFF;
 							break;
 						}
 						Keynum2=MatrixKey(); 
@@ -260,6 +381,7 @@ void main()
 void Timer0_Routine() interrupt 1
 {
 	static unsigned int T0Count;
+	static unsigned int T0Count1;
 	static unsigned char KeyScan;
 	static unsigned char PWMCount;
 	TL0 = 0x66;				//设置定时初始值
@@ -307,7 +429,46 @@ void Timer0_Routine() interrupt 1
 		PWMCount = 0;
 	}
 	
-	
+	if(key01==1 && LEDmode3Flag==0 && LEDNum > 0)
+	{
+			T0Count1++;
+			if(T0Count1>=lit)
+			{
+					T0Count1=0;
+					P2|=LED0[LEDi];
+					if(LEDmode==1&&LEDmode2==0)
+					{
+							LEDi++;
+							if(LEDi>=LEDNum) LEDi=0;
+					}
+					else if(LEDmode==2&&LEDmode2==0)    
+					{
+							if(LEDi==0) LEDi=LEDNum-1;
+							else LEDi--;
+					}
+					else if(LEDmode2==1)                 
+					{
+							if(LEDi==LEDNum-1) LEDflag=1;
+							else if(LEDi == 0) LEDflag=0;
+							if(LEDflag) LEDi--;
+							else LEDi++;
+					}
+					else if(LEDmode2==2)              
+					{
+							if(LEDi==LEDNum-1) LEDflag=0;
+							else if(LEDi==0) LEDflag=1;
+							if(LEDflag) LEDi++;
+							else LEDi--;
+					}
+
+					P2&=~LED0[LEDi];  
+			}
+	}
+						
+						
+						
+						
+											
 	if(T0Count>=10)  
     {
       T0Count=0;
